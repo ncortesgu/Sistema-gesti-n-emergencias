@@ -1,0 +1,8 @@
+# Ejecutables
+bin/
+*.exe
+*.o
+*.obj
+
+# Configuraciones locales del editor
+.vscode/
