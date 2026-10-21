@@ -141,12 +141,9 @@ void imprimirEmergencia(const Emergencia &emergencia) {
         std::cout << "Advertencia: " << emergencia.getAdvertencia() << "\n";
     }
 
-    std::cout << "Reportante: " << emergencia.getNombreReportante() << " | CC "
-              << emergencia.getCedulaReportante() << " | "
-              << emergencia.getTelefonoReportante() << "\n";
-    std::cout << "Ubicación sintética: "
-              << GeneradorDatos::formatearCoordenada(emergencia.getLatitud()) << ", "
-              << GeneradorDatos::formatearCoordenada(emergencia.getLongitud()) << "\n";
+    std::cout << "Teléfono del reportante: " << emergencia.getTelefonoReportante() << "\n";
+    std::cout << "Ubicación (X, Y): "
+              << GeneradorDatos::formatearCoordenada(emergencia.getUbicacion()) << "\n";
     std::cout << "Registrada en: " << juntar(emergencia.getDepartamentos()) << "\n";
     std::cout << "Fecha: " << emergencia.getFechaHora() << "\n";
 }
@@ -154,8 +151,9 @@ void imprimirEmergencia(const Emergencia &emergencia) {
 void imprimirUsuario(const std::string &departamento, const Usuario &usuario) {
     std::cout << "\n>>> ATENDIENDO EN " << departamento << " (prioridad "
               << usuario.getPrioridad() << ")\n";
-    std::cout << "Reportante: " << usuario.getNombre() << " | CC " << usuario.getCedula()
-              << " | " << usuario.getTelefono() << "\n";
+    std::cout << "Teléfono: " << usuario.getTelefono() << "\n";
+    std::cout << "Ubicación (X, Y): "
+              << GeneradorDatos::formatearCoordenada(usuario.getUbicacion()) << "\n";
     std::cout << "Estado: " << (usuario.isAtendido() ? "atendido" : "pendiente") << "\n";
 }
 

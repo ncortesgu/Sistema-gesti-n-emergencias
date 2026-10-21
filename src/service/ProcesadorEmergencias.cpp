@@ -49,12 +49,8 @@ bool ProcesadorEmergencias::procesarSiguiente(Emergencia &salida, std::string &e
     emergencia.setModelo(resultado.modelo);
     emergencia.setAdvertencia(resultado.advertencia);
 
-    emergencia.setNombreReportante(generador.generarNombre());
-    emergencia.setCedulaReportante(generador.generarCedula());
     emergencia.setTelefonoReportante(generador.generarTelefono());
-    const Coordenada coordenada = generador.generarCoordenada();
-    emergencia.setLatitud(coordenada.latitud);
-    emergencia.setLongitud(coordenada.longitud);
+    emergencia.setUbicacion(generador.generarCoordenada());
     emergencia.setFechaHora(GeneradorDatos::fechaHoraActual());
 
     if (emergencia.getDepartamentos().empty() &&
@@ -84,8 +80,7 @@ std::vector<Emergencia> ProcesadorEmergencias::procesarTodas(
 
 void ProcesadorEmergencias::registrarEnColas(const Emergencia &emergencia) {
     for (const std::string &departamento : emergencia.getDepartamentos()) {
-        Usuario usuario(emergencia.getNombreReportante(),
-                        emergencia.getCedulaReportante(),
+        Usuario usuario(emergencia.getUbicacion(),
                         emergencia.getTelefonoReportante(),
                         emergencia.getSeveridad(),
                         departamento);
@@ -101,7 +96,7 @@ bool ProcesadorEmergencias::atenderSiguiente(const std::string &departamento,
     }
 
     usuario = gestor.atenderSiguiente(departamento);
-    if (usuario.getNombre().empty()) {
+    if (usuario.getTelefono().empty()) {
         error = "No se pudo atender la emergencia del departamento '" + departamento + "'.";
         return false;
     }

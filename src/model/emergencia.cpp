@@ -5,8 +5,7 @@ Emergencia::Emergencia() {
     severidadEtiqueta = "Informativa";
     confianza = 0.0;
     requiereRevision = true;
-    latitud = 0.0;
-    longitud = 0.0;
+    ubicacion = coordenadas();
 }
 
 std::string Emergencia::getId() const { return id; }
@@ -21,11 +20,8 @@ bool Emergencia::isRequiereRevision() const { return requiereRevision; }
 std::string Emergencia::getProveedor() const { return proveedor; }
 std::string Emergencia::getModelo() const { return modelo; }
 std::string Emergencia::getAdvertencia() const { return advertencia; }
-std::string Emergencia::getNombreReportante() const { return nombreReportante; }
-std::string Emergencia::getCedulaReportante() const { return cedulaReportante; }
 std::string Emergencia::getTelefonoReportante() const { return telefonoReportante; }
-double Emergencia::getLatitud() const { return latitud; }
-double Emergencia::getLongitud() const { return longitud; }
+coordenadas Emergencia::getUbicacion() const { return ubicacion; }
 std::string Emergencia::getFechaHora() const { return fechaHora; }
 
 void Emergencia::setId(const std::string &nuevoId) { id = nuevoId; }
@@ -50,15 +46,8 @@ void Emergencia::setModelo(const std::string &nuevoModelo) { modelo = nuevoModel
 void Emergencia::setAdvertencia(const std::string &nuevaAdvertencia) {
     advertencia = nuevaAdvertencia;
 }
-void Emergencia::setNombreReportante(const std::string &nuevoNombre) {
-    nombreReportante = nuevoNombre;
-}
-void Emergencia::setCedulaReportante(const std::string &nuevaCedula) {
-    cedulaReportante = nuevaCedula;
-}
 void Emergencia::setTelefonoReportante(const std::string &nuevoTelefono) {
     telefonoReportante = nuevoTelefono;
 }
-void Emergencia::setLatitud(double nuevaLatitud) { latitud = nuevaLatitud; }
-void Emergencia::setLongitud(double nuevaLongitud) { longitud = nuevaLongitud; }
+void Emergencia::setUbicacion(coordenadas nuevaUbicacion) { ubicacion = nuevaUbicacion; }
 void Emergencia::setFechaHora(const std::string &nuevaFechaHora) { fechaHora = nuevaFechaHora; }

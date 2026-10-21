@@ -6,7 +6,9 @@ Extensión del proyecto de estructuras de datos para recibir emergencias por tex
 clasificarlas en **gravedad** y **organismo responsable**, y encolarlas en las colas de
 prioridad existentes (`GestorDepartamentos`).
 
-El código original no se modificó. Toda la funcionalidad nueva vive en archivos nuevos.
+La integración se adaptó a la nueva clase `coordenadas` y al `Usuario` sin nombre ni cédula.
+La mayor parte de la funcionalidad nueva vive en archivos nuevos; `main.cpp` se actualizó para
+seguir compilando con la nueva firma de `Usuario`.
 
 ## Arquitectura
 
@@ -31,7 +33,7 @@ GestorDepartamentos (colas de prioridad existentes)
 
 - La consola C++ mantiene una **cola FIFO de entrada** con textos y audios sin clasificar.
 - Al procesar una solicitud, el servicio responde con severidad, departamentos y confianza.
-- El C++ genera datos sintéticos del reportante: nombre, cédula, teléfono y coordenadas.
+- El C++ genera datos sintéticos del reportante: teléfono y coordenadas X/Y.
 - La emergencia se registra en la cola de prioridad de cada departamento seleccionado.
 - `atenderSiguiente` sigue usando el `GestorDepartamentos` original.
 
@@ -235,7 +237,7 @@ Fuerza la carga del modelo de Laya en memoria.
 9. Listar micrófonos disponibles.
 
 Cada emergencia procesada muestra el texto o transcripción, severidad, departamentos,
-confianza, proveedor, modelo, datos sintéticos del reportante y coordenadas.
+confianza, proveedor, modelo, teléfono del reportante y coordenadas X/Y.
 
 ## Configuración
 
@@ -314,8 +316,9 @@ scripts/...
   ffmpeg (la imagen oficial lo incluye con `--convert`).
 - **Los acentos se ven mal en Windows:** la consola configura UTF-8 al iniciar; si usas otra
   terminal, ejecuta `chcp 65001`.
-- **Teléfonos y coordenadas:** son datos sintéticos generados en C++, no una geolocalización
-  real ni datos personales.
+- **Teléfono y coordenadas X/Y:** son datos sintéticos generados en C++, no una
+  geolocalización real. Las coordenadas usan la clase `coordenadas` y se generan en una
+  cuadrícula simulada de 0 a 1000.
 
 ## Seguridad
 

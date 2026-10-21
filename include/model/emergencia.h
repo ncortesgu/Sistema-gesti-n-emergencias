@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "model/coordenadas.h"
+
 class Emergencia {
 private:
     std::string id;
@@ -19,11 +21,8 @@ private:
     std::string modelo;
     std::string advertencia;
 
-    std::string nombreReportante;
-    std::string cedulaReportante;
     std::string telefonoReportante;
-    double latitud;
-    double longitud;
+    coordenadas ubicacion;
     std::string fechaHora;
 
 public:
@@ -42,11 +41,8 @@ public:
     std::string getProveedor() const;
     std::string getModelo() const;
     std::string getAdvertencia() const;
-    std::string getNombreReportante() const;
-    std::string getCedulaReportante() const;
     std::string getTelefonoReportante() const;
-    double getLatitud() const;
-    double getLongitud() const;
+    coordenadas getUbicacion() const;
     std::string getFechaHora() const;
 
     // Setters
@@ -62,11 +58,8 @@ public:
     void setProveedor(const std::string &nuevoProveedor);
     void setModelo(const std::string &nuevoModelo);
     void setAdvertencia(const std::string &nuevaAdvertencia);
-    void setNombreReportante(const std::string &nuevoNombre);
-    void setCedulaReportante(const std::string &nuevaCedula);
     void setTelefonoReportante(const std::string &nuevoTelefono);
-    void setLatitud(double nuevaLatitud);
-    void setLongitud(double nuevaLongitud);
+    void setUbicacion(coordenadas nuevaUbicacion);
     void setFechaHora(const std::string &nuevaFechaHora);
 };
 

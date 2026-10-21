@@ -32,6 +32,7 @@ FetchContent_MakeAvailable(miniaudio)
 
 add_library(emergencias_core STATIC
     src/model/usuario.cpp
+    src/model/coordenadas.cpp
     src/model/emergencia.cpp
     src/service/GestorDepartamentos.cpp
     src/service/ClienteClasificador.cpp

@@ -5,21 +5,10 @@
 #include <iomanip>
 #include <sstream>
 
-GeneradorDatos::GeneradorDatos()
-    : generador(std::random_device{}()),
-      nombres({"Carlos Pérez", "María Rodríguez", "Juan Gómez", "Ana Martínez",
-               "Luis Fernández", "Laura Sánchez", "Andrés Ramírez", "Camila Torres",
-               "Jorge Herrera", "Valentina Díaz", "Diego Castillo", "Paula Vargas",
-               "Felipe Moreno", "Sofía Jiménez", "Ricardo Ortiz", "Daniela Rojas",
-               "Julián Cárdenas", "Natalia Peña", "Óscar Guerrero", "Marcela Silva"}) {}
+GeneradorDatos::GeneradorDatos() : generador(std::random_device{}()) {}
 
 int GeneradorDatos::enteroEntre(int minimo, int maximo) {
     std::uniform_int_distribution<int> distribucion(minimo, maximo);
-    return distribucion(generador);
-}
-
-double GeneradorDatos::realEntre(double minimo, double maximo) {
-    std::uniform_real_distribution<double> distribucion(minimo, maximo);
     return distribucion(generador);
 }
 
@@ -33,21 +22,6 @@ std::string GeneradorDatos::generarId() {
     return id;
 }
 
-std::string GeneradorDatos::generarNombre() {
-    return nombres[static_cast<std::size_t>(enteroEntre(0, static_cast<int>(nombres.size()) - 1))];
-}
-
-std::string GeneradorDatos::generarCedula() {
-    const int longitud = enteroEntre(8, 10);
-    std::string cedula;
-    cedula.reserve(static_cast<std::size_t>(longitud));
-    cedula.push_back(static_cast<char>('1' + enteroEntre(0, 8)));
-    for (int i = 1; i < longitud; ++i) {
-        cedula.push_back(static_cast<char>('0' + enteroEntre(0, 9)));
-    }
-    return cedula;
-}
-
 std::string GeneradorDatos::generarTelefono() {
     std::ostringstream telefono;
     telefono << "+57 3" << enteroEntre(0, 5) << enteroEntre(0, 9) << " ";
@@ -56,12 +30,9 @@ std::string GeneradorDatos::generarTelefono() {
     return telefono.str();
 }
 
-Coordenada GeneradorDatos::generarCoordenada() {
-    // Zona urbana aproximada de Bogotá, Colombia.
-    Coordenada coordenada;
-    coordenada.latitud = realEntre(4.50, 4.83);
-    coordenada.longitud = realEntre(-74.20, -74.00);
-    return coordenada;
+coordenadas GeneradorDatos::generarCoordenada() {
+    // Cuadrícula simulada de 0 a 1000 para ubicar al reportante.
+    return coordenadas(enteroEntre(0, 1000), enteroEntre(0, 1000));
 }
 
 std::string GeneradorDatos::fechaHoraActual() {
@@ -78,8 +49,8 @@ std::string GeneradorDatos::fechaHoraActual() {
     return salida.str();
 }
 
-std::string GeneradorDatos::formatearCoordenada(double valor) {
+std::string GeneradorDatos::formatearCoordenada(const coordenadas &ubicacion) {
     std::ostringstream salida;
-    salida << std::fixed << std::setprecision(6) << valor;
+    salida << "(" << ubicacion.getX() << ", " << ubicacion.getY() << ")";
     return salida.str();
 }

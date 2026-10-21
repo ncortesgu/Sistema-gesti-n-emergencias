@@ -4,9 +4,9 @@ Extensión del proyecto de estructuras de datos para recibir emergencias por **t
 **voz**, clasificarlas por **gravedad** y **organismo responsable**, y encolarlas en las
 colas de prioridad existentes (`GestorDepartamentos`).
 
-El código original de la práctica no se modificó. La funcionalidad nueva está en archivos
-nuevos y se apoya en el `GestorDepartamentos` que ya existía. La guía técnica ampliada está
-en [`README_EMERGENCIAS.md`](README_EMERGENCIAS.md).
+El código de la práctica se adaptó a la última versión de `Usuario` y a la nueva clase
+`coordenadas` (X/Y). `GestorDepartamentos` conserva su lógica de colas de prioridad. La guía
+técnica ampliada está en [`README_EMERGENCIAS.md`](README_EMERGENCIAS.md).
 
 ## Qué se insertó
 
@@ -14,9 +14,9 @@ en [`README_EMERGENCIAS.md`](README_EMERGENCIAS.md).
 
 | Archivo | Función |
 |---|---|
-| `include/model/emergencia.h`, `src/model/emergencia.cpp` | Registro de una emergencia: texto, transcripción, severidad, departamentos, confianza y datos del reportante |
+| `include/model/emergencia.h`, `src/model/emergencia.cpp` | Registro de una emergencia: texto, transcripción, severidad, departamentos, confianza, teléfono y coordenadas X/Y |
 | `include/service/ClienteClasificador.h`, `src/service/ClienteClasificador.cpp` | Cliente HTTP con `cpp-httplib` + `nlohmann/json` |
-| `include/service/GeneradorDatos.h`, `src/service/GeneradorDatos.cpp` | Teléfono, cédula, nombre y coordenadas aleatorias del reportante |
+| `include/service/GeneradorDatos.h`, `src/service/GeneradorDatos.cpp` | Teléfono y coordenadas X/Y aleatorias del reportante |
 | `include/service/ProcesadorEmergencias.h`, `src/service/ProcesadorEmergencias.cpp` | Cola FIFO de entrada, clasificación, enriquecimiento y registro en las colas por departamento |
 | `include/service/GrabadorAudio.h`, `src/service/GrabadorAudio.cpp` | Grabación del micrófono a WAV 16 kHz mono con miniaudio |
 | `src/ui/main_emergencias.cpp` | Consola nueva con menú de texto, audio, micrófono, colas y atención |
@@ -47,9 +47,13 @@ en [`README_EMERGENCIAS.md`](README_EMERGENCIAS.md).
 
 ### Qué cambió del código original
 
-Solo se agregaron líneas a `.gitignore` para excluir `build/`, `.env`, audios, modelos y
-entornos virtuales. No se modificaron `main.cpp`, `usuario.*`, `GestorDepartamentos.*` ni los
-archivos existentes de `src/` e `include/`.
+Se adaptó `main.cpp` y la integración de las clases nuevas al cambio de `Usuario`: ya no
+existen `nombre` ni `cedula`, y la ubicación se guarda con la clase `coordenadas` (X/Y).
+También se agregaron líneas a `.gitignore` para excluir `build/`, `.env`, audios, modelos y
+entornos virtuales. `GestorDepartamentos` mantiene su funcionamiento original.
+
+La clase `coordenadas` vive en `include/model/coordenadas.h` y `src/model/coordenadas.cpp`.
+Nuestro modelo `Emergencia` también almacena `coordenadas` y teléfono, no nombre ni documento.
 
 ## Arquitectura
 
@@ -252,6 +256,11 @@ contenedor del clasificador.
 
 La API ya tiene CORS habilitado para desarrollo (`allow_origins=["*"]`). En producción se debe
 restringir a los dominios reales.
+
+La API de clasificación **no devuelve teléfono ni coordenadas**. Esos datos se generan en la
+consola C++ al encolar la emergencia, usando la clase `coordenadas` (X/Y). Si el frontend
+necesita mostrar la ubicación, debe enviarla en su propio flujo o esperar el endpoint de colas
+descrito al final de esta sección.
 
 ### Variables sugeridas en el frontend
 
@@ -474,7 +483,10 @@ Whisper falso.
   fuera de Docker.
 - **Acentos raros en la terminal:** ejecuta `chcp 65001` o usa Windows Terminal; la consola
   configura UTF-8 al iniciar.
-- **Teléfonos y coordenadas:** son datos sintéticos generados en C++, no geolocalización real.
+- **Teléfono y coordenadas X/Y:** son datos sintéticos generados en C++, no geolocalización
+  real. La API de Python devuelve la clasificación; la ubicación se asigna en la consola C++
+  al encolar la emergencia. Las coordenadas usan la clase `coordenadas` de tu compañero y se
+  generan en una cuadrícula simulada de 0 a 1000.
 
 ## Diseño de la clasificación
 
