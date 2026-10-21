@@ -1,5 +1,7 @@
 # Sistema de gestión de emergencias
 
+> Guía rápida para compañeros y conexión del frontend: [`README.md`](README.md).
+
 Extensión del proyecto de estructuras de datos para recibir emergencias por texto o voz,
 clasificarlas en **gravedad** y **organismo responsable**, y encolarlas en las colas de
 prioridad existentes (`GestorDepartamentos`).
