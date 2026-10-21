@@ -24,6 +24,7 @@ std::string Usuario::getTelefono() const { return telefono; }
 int Usuario::getPrioridad() const { return prioridad; }
 std::string Usuario::getDepartamento() const { return departamento; }
 bool Usuario::isAtendido() const { return atendido; }
+std::string Usuario::getId() const { return id; }
 
 // Setters
 void Usuario::setUbicacion(coordenadas nuevaUbicacion) { ubicacion = nuevaUbicacion; }
@@ -31,6 +32,7 @@ void Usuario::setTelefono(std::string nuevoTelefono) { telefono = nuevoTelefono;
 void Usuario::setPrioridad(int nuevaPrioridad) { prioridad = nuevaPrioridad; }
 void Usuario::setDepartamento(std::string nuevoDepartamento) { departamento = nuevoDepartamento; }
 void Usuario::setAtendido(bool nuevoEstado) { atendido = nuevoEstado; }
+void Usuario::setId(std::string nuevoId) { id = nuevoId; }
 
 // definicion de mayor o menor para la cola de prioridad 
 bool Usuario::operator<(const Usuario& otro) const {
