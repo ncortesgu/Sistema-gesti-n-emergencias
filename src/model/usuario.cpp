@@ -2,18 +2,16 @@
 
 // Constructor vacio
 Usuario::Usuario() {
-    nombre = "";
-    cedula = "";
-    telefono = "";
-    prioridad = 5;
-    departamento = "";
-    atendido = false;
+    this->ubicacion = coordenadas(); 
+    this->telefono = "";
+    this->prioridad = 5;
+    this->departamento = "";
+    this->atendido = false;
 }
 
 // Constructor con parametros
-Usuario::Usuario(std::string nombre, std::string cedula, std::string telefono, int prioridad, std::string departamento) {
-    this->nombre = nombre;
-    this->cedula = cedula;
+Usuario::Usuario(coordenadas ubicacion, std::string telefono, int prioridad, std::string departamento) {
+    this->ubicacion = ubicacion;
     this->telefono = telefono;
     this->prioridad = prioridad;
     this->departamento = departamento;
@@ -21,37 +19,20 @@ Usuario::Usuario(std::string nombre, std::string cedula, std::string telefono, i
 }
 
 // Getters
-std::string Usuario::getNombre()const 
-{ return nombre; }
-std::string Usuario::getCedula()const 
-{ return cedula; }
-std::string Usuario::getTelefono()const
- { return telefono; }
-int Usuario::getPrioridad()const 
-{ return prioridad; }
-std::string Usuario::getDepartamento()const 
-{ return departamento; }
-bool Usuario::isAtendido()const 
-{ return atendido; }
-
-
+coordenadas Usuario::getUbicacion() const { return ubicacion; }
+std::string Usuario::getTelefono() const { return telefono; }
+int Usuario::getPrioridad() const { return prioridad; }
+std::string Usuario::getDepartamento() const { return departamento; }
+bool Usuario::isAtendido() const { return atendido; }
 
 // Setters
-void Usuario::setNombre(std::string nuevoNombre) 
-{ nombre = nuevoNombre; }
-void Usuario::setCedula(std::string nuevaCedula) 
-{ cedula = nuevaCedula; }
-void Usuario::setTelefono(std::string nuevoTelefono) 
-{ telefono = nuevoTelefono; }
-void Usuario::setPrioridad(int nuevaPrioridad) 
-{ prioridad = nuevaPrioridad; }
-void Usuario::setDepartamento(std::string nuevoDepartamento) 
-{ departamento = nuevoDepartamento; }
-void Usuario::setAtendido(bool nuevoEstado)
- { atendido = nuevoEstado; }
+void Usuario::setUbicacion(coordenadas nuevaUbicacion) { ubicacion = nuevaUbicacion; }
+void Usuario::setTelefono(std::string nuevoTelefono) { telefono = nuevoTelefono; }
+void Usuario::setPrioridad(int nuevaPrioridad) { prioridad = nuevaPrioridad; }
+void Usuario::setDepartamento(std::string nuevoDepartamento) { departamento = nuevoDepartamento; }
+void Usuario::setAtendido(bool nuevoEstado) { atendido = nuevoEstado; }
 
-// comparacion entre 2 usuarios por medio de la prioridad de su emergencia 
-
- bool Usuario::operator<(Usuario otro)const{
-    return prioridad > otro.getPrioridad();
- }
+// definicion de mayor o menor para la cola de prioridad 
+bool Usuario::operator<(const Usuario& otro) const {
+    return prioridad > otro.prioridad; // Menor numero representa mayor prioridad (1 es mas urgente que 5)
+}

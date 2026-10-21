@@ -2,11 +2,11 @@
 #define USUARIO_H
 
 #include <string>
+#include "model/coordenadas.h" // 
 
 class Usuario {
 private:
-    std::string nombre;
-    std::string cedula;
+    coordenadas ubicacion;
     std::string telefono;
     int prioridad;
     std::string departamento;
@@ -15,28 +15,24 @@ private:
 public:
     // Constructores
     Usuario();
-    Usuario(std::string nombre, std::string cedula, std::string telefono, int prioridad, std::string departamento);
+    Usuario(coordenadas ubicacion, std::string telefono, int prioridad, std::string departamento);
 
     // Getters
-    std::string getNombre()const;
-    std::string getCedula()const;
-    std::string getTelefono()const;
-    int getPrioridad()const;
-    std::string getDepartamento()const;
-    bool isAtendido()const;
+    coordenadas getUbicacion() const;
+    std::string getTelefono() const;
+    int getPrioridad() const;
+    std::string getDepartamento() const;
+    bool isAtendido() const;
 
     // Setters
-    void setNombre(std::string nuevoNombre);
-    void setCedula(std::string nuevaCedula);
+    void setUbicacion(coordenadas nuevaUbicacion);
     void setTelefono(std::string nuevoTelefono);
     void setPrioridad(int nuevaPrioridad);
     void setDepartamento(std::string nuevoDepartamento);
     void setAtendido(bool nuevoEstado);
 
-    // declaracion de operador para clase usuario
-
-    bool operator<(Usuario otro)const;
-
+    // funcion para definir cuando un usuario es mayor que otro en prioridad
+    bool operator<(const Usuario& otro) const;
 };
 
 #endif // USUARIO_H
