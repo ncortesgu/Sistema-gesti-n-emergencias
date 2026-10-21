@@ -6,3 +6,23 @@ bin/
 
 # Configuraciones locales del editor
 .vscode/
+
+# Compilación CMake
+build/
+CMakeUserPresets.json
+
+# Entorno local del servicio Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Variables de entorno y audios generados
+.env
+audios/
+*.wav
+
+# Modelos descargados
+models/
+*.bin

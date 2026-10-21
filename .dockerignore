@@ -1,0 +1,12 @@
+.git
+.gitignore
+build
+CMakeUserPresets.json
+audios
+*.wav
+.env
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+servicios/clasificador/pruebas

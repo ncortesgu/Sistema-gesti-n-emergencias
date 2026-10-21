@@ -1,0 +1,93 @@
+name: sistema-emergencias
+
+services:
+  whisper-modelos:
+    image: ghcr.io/ggml-org/whisper.cpp:main
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ ! -f "/models/ggml-${WHISPER_MODEL:-small}.bin" ]; then
+          echo "Descargando modelo Whisper ${WHISPER_MODEL:-small}..."
+          /app/models/download-ggml-model.sh "${WHISPER_MODEL:-small}" /models
+        else
+          echo "Modelo Whisper ya descargado."
+        fi
+    volumes:
+      - whisper_modelos:/models
+
+  whisper:
+    image: ghcr.io/ggml-org/whisper.cpp:main
+    entrypoint: ["whisper-server"]
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - -m
+      - /models/ggml-${WHISPER_MODEL:-small}.bin
+      - -l
+      - ${WHISPER_LANGUAGE:-es}
+      - --convert
+      - -t
+      - "4"
+    volumes:
+      - whisper_modelos:/models
+    depends_on:
+      whisper-modelos:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/ | grep -qE '200|404'
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  clasificador:
+    build:
+      context: ./servicios/clasificador
+      args:
+        WITH_LAYA: ${WITH_LAYA:-1}
+    environment:
+      PROVEEDOR: ${PROVEEDOR:-laya}
+      FALLBACK_REGLAS: ${FALLBACK_REGLAS:-true}
+      CONFIANZA_MINIMA: ${CONFIANZA_MINIMA:-0.55}
+      UMBRAL_APOYO: ${UMBRAL_APOYO:-0.55}
+      LAYA_MODEL: ${LAYA_MODEL:-multilingual}
+      LAYA_PRELOAD: ${LAYA_PRELOAD:-false}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      JEV_MODEL: ${JEV_MODEL:-typesafe/jev-1.14}
+      WHISPER_URL: http://whisper:8080
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-es}
+      TIMEOUT_LLM: ${TIMEOUT_LLM:-45}
+      TIMEOUT_WHISPER: ${TIMEOUT_WHISPER:-300}
+      HF_HOME: /models/hf
+    volumes:
+      - hf_cache:/models/hf
+    ports:
+      - "${CLASIFICADOR_PUERTO:-8100}:8000"
+    depends_on:
+      whisper:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["app"]
+    stdin_open: true
+    tty: true
+    environment:
+      CLASIFICADOR_URL: http://clasificador:8000
+      PROVEEDOR_CLASIFICACION: ${PROVEEDOR:-laya}
+      DIRECTORIO_AUDIOS: /app/audios
+    volumes:
+      - ./audios:/app/audios
+    depends_on:
+      clasificador:
+        condition: service_started
+
+volumes:
+  whisper_modelos:
+  hf_cache:
