@@ -1,0 +1,20 @@
+﻿{
+  "unidades": [
+    {
+      "id": "AMB-001",
+      "departamento": "ambulancia",
+      "x": 690,
+      "y": 380,
+      "efectividad": 1.0,
+      "velocidad": 45.0
+    },
+    {
+      "id": "BOM-001",
+      "departamento": "bomberos",
+      "x": 580,
+      "y": 260,
+      "efectividad": 1.0,
+      "velocidad": 40.0
+    }
+  ]
+}

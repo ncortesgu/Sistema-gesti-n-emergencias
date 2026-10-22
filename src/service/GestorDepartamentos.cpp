@@ -32,6 +32,56 @@ Usuario GestorDepartamentos::atenderSiguiente(std::string nombreDepartamento) {
 
 
 // Verifica si hay pacientes esperando en un departamento específico
+bool GestorDepartamentos::atenderPorId(const std::string &nombreDepartamento,
+                                       const std::string &id, Usuario &usuario) {
+    auto it = departamentos.find(nombreDepartamento);
+    if (it == departamentos.end() || it->second.empty()) {
+        return false;
+    }
+
+    std::priority_queue<Usuario> copia = it->second;
+    std::vector<Usuario> pendientes;
+    bool encontrado = false;
+
+    while (!copia.empty()) {
+        Usuario actual = copia.top();
+        copia.pop();
+        if (actual.getId() == id) {
+            actual.setAtendido(true);
+            usuario = actual;
+            encontrado = true;
+            break;
+        }
+        pendientes.push_back(actual);
+    }
+
+    if (!encontrado) {
+        return false;
+    }
+
+    for (const Usuario &pendiente : pendientes) {
+        copia.push(pendiente);
+    }
+    it->second = copia;
+    return true;
+}
+
+std::vector<Usuario> GestorDepartamentos::listarUsuarios(
+    const std::string &nombreDepartamento) const {
+    std::vector<Usuario> usuarios;
+    auto it = departamentos.find(nombreDepartamento);
+    if (it == departamentos.end()) {
+        return usuarios;
+    }
+
+    std::priority_queue<Usuario> copia = it->second;
+    while (!copia.empty()) {
+        usuarios.push_back(copia.top());
+        copia.pop();
+    }
+    return usuarios;
+}
+
 bool GestorDepartamentos::hayUsuariosEnEspera(std::string nombreDepartamento) {
     if (departamentos.find(nombreDepartamento) != departamentos.end()) {
         return !departamentos[nombreDepartamento].empty();

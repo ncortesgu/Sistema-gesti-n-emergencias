@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050505">
+  <meta name="description" content="Sistema de Gestión de Emergencias: clasificación, colas de prioridad, mapa X/Y y estado operativo.">
+  <title>SGE // Centro de Mando</title>
+  <style>
+/* OD-LAYOUT-PRIMITIVES v1 — structure only: display, flex/grid, overflow, wrapping, ratio.
+   Put this @layer first; product CSS outside the layer always wins. */
+@layer od-layout {
+  :where(.od-stack,.od-row,.od-row-top,.od-cluster,.od-grid,.od-field,.od-stat,.od-cell,.od-tile) > :where(*) { min-width: 0; }
+
+  /* containers */
+  .od-stack   { display: flex; flex-direction: column; gap: var(--od-gap, 8px); }
+  .od-row     { display: flex; align-items: center; gap: var(--od-gap, 8px); }
+  .od-row-top { display: flex; align-items: flex-start; gap: var(--od-gap, 8px); }
+  .od-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--od-gap, 8px); }
+  .od-fill    { flex: 1 1 0; min-width: 0; }
+  .od-fixed   { flex: none; }
+  .od-grid    { display: grid; gap: var(--od-gap, 12px); grid-template-columns: repeat(var(--od-cols, 3), minmax(0, 1fr)); }
+
+  /* stacked information: each piece is its own line — never sibling inline spans */
+  .od-stat, .od-field, .od-cell { display: grid; gap: var(--od-gap, 2px); }
+  :where(.od-stat,.od-field,.od-cell) > :where(*) { display: block; }
+  .od-tile { display: grid; grid-template-rows: auto 1fr; }
+  :where(.od-tile) > :where(*) { display: block; }
+
+  /* media keeps its intrinsic ratio by default; never a distorted or cropped
+     cover by accident. height:auto lets the ratio win over an <img height="…">
+     attribute. Cropping to a uniform box is an explicit opt-in: set --od-ratio
+     AND add .od-media-cover together (per the core rule, only where a crop is
+     deliberate — tile thumbs, decorative fills — never on full-frame content). */
+  .od-media { display: block; width: 100%; height: auto; aspect-ratio: var(--od-ratio, auto); }
+  .od-media-cover { object-fit: cover; }
+
+  /* data text only — authored copy is rewritten to its budget instead */
+  .od-truncate { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .od-clamp-2, .od-clamp-3 { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .od-clamp-2 { -webkit-line-clamp: 2; }
+  .od-clamp-3 { -webkit-line-clamp: 3; }
+  .od-lines-2 { min-height: calc(2 * 1.4em); }   /* block-level reservation for a shared baseline */
+  .od-nowrap  { white-space: nowrap; }           /* 数字+单位 · 价格+起 · 日期+星期 */
+  .od-keep    { word-break: keep-all; overflow-wrap: anywhere; } /* CJK labels break at spaces / <wbr> first */
+
+  /* screen skeleton (optional): bars take their own space, the middle scrolls — no padding guessed for chrome */
+  .od-screen { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; }
+  .od-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+
+  /* horizontal rail: the next item peeks at the edge; trailing room survives overflow */
+  .od-rail { display: flex; gap: var(--od-gap, 8px); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+             padding-inline: var(--od-rail-pad, 16px); scroll-padding-inline: var(--od-rail-pad, 16px); }
+  .od-rail::-webkit-scrollbar { display: none; }
+  :where(.od-rail) > :where(*) { flex: none; scroll-snap-align: start; }
+  :where(.od-rail) > :where(:last-child) { margin-inline-end: var(--od-rail-pad, 16px); }
+
+  .od-spacer { flex: none; visibility: hidden; pointer-events: none; }
+  .od-touch  { min-width: 44px; min-height: 44px; }
+}
+/* /OD-LAYOUT-PRIMITIVES v1 */
+  </style>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+  <a class="skip-link" href="#main">Saltar al contenido principal</a>
+
+  <header class="topbar">
+    <a class="brand" href="#/estado" aria-label="SGE, ir al estado del sistema">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" shape-rendering="crispEdges" focusable="false">
+          <path d="M2 4h4v4H2zM26 4h4v4h-4zM4 8h4v4H4zM24 8h4v4h-4zM6 12h4v4H6zM22 12h4v4h-4z" fill="currentColor"/>
+          <path d="M10 8h12v4H10zM8 12h16v6H8zM10 18h12v6H10zM12 24h8v4h-8z" fill="currentColor"/>
+          <path d="M11 14h3v3h-3zM18 14h3v3h-3zM14 24h4v2h-4z" fill="#050505"/>
+        </svg>
+      </span>
+      <span class="brand-copy">
+        <span class="brand-name">SGE<span class="brand-slash">//</span></span>
+        <span class="brand-sub">Emergency Ops</span>
+      </span>
+    </a>
+
+    <nav id="top-nav" class="top-nav" aria-label="Navegación principal"></nav>
+
+    <div class="top-actions">
+      <span id="net-pill" class="net-pill is-unknown" title="Estado de conexión con el backend">
+        <span class="net-dot" aria-hidden="true"></span>
+        <span id="net-text">SIN SEÑAL</span>
+      </span>
+      <a href="#/config" class="icon-btn" data-nav="config" aria-label="Configuración" title="Configuración">
+        <svg viewBox="0 0 16 16" class="px-icon" shape-rendering="crispEdges" aria-hidden="true" focusable="false">
+          <path d="M6 1h4v2h2v2h2v4h-2v2h-2v2H6v-2H4v-2H2V5h2V3h2z" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M6 6h4v4H6z" fill="currentColor"/>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <div class="system-banners">
+    <div id="offline-banner" class="global-banner is-danger" role="status" hidden>
+      <span class="banner-copy"><strong>SIN CONEXIÓN</strong><span id="offline-text">No se pudo alcanzar el backend.</span></span>
+      <button type="button" class="btn btn-small" data-action="retry-health">Reintentar</button>
+    </div>
+  </div>
+
+  <main id="main" class="app-main" tabindex="-1">
+    <div id="view"></div>
+  </main>
+
+  <nav id="bottom-nav" class="bottom-nav" aria-label="Navegación móvil"></nav>
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="false"></div>
+  <div id="modal-root"></div>
+
+  <noscript>
+    <div class="noscript-panel">
+      <h1>JavaScript desactivado</h1>
+      <p>El Sistema de Gestión de Emergencias necesita JavaScript para funcionar. Actívalo y recarga la página.</p>
+    </div>
+  </noscript>
+
+  <script src="app.js?v=2" defer></script>
+</body>
+</html>

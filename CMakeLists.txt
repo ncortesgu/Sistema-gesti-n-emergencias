@@ -33,11 +33,14 @@ FetchContent_MakeAvailable(miniaudio)
 add_library(emergencias_core STATIC
     src/model/usuario.cpp
     src/model/coordenadas.cpp
+    src/model/unidad.cpp
     src/model/emergencia.cpp
     src/service/GestorDepartamentos.cpp
+    src/service/GestorRecursos.cpp
     src/service/ClienteClasificador.cpp
     src/service/GeneradorDatos.cpp
     src/service/ProcesadorEmergencias.cpp
+    src/service/ServicioOperaciones.cpp
     src/service/GrabadorAudio.cpp
 )
 
@@ -72,6 +75,9 @@ target_include_directories(demo_colas PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(sistema_emergencias src/ui/main_emergencias.cpp)
 target_link_libraries(sistema_emergencias PRIVATE emergencias_core)
+
+add_executable(servidor_emergencias src/ui/main_servidor.cpp)
+target_link_libraries(servidor_emergencias PRIVATE emergencias_core)
 
 if(MSVC)
     target_compile_options(demo_colas PRIVATE /utf-8)

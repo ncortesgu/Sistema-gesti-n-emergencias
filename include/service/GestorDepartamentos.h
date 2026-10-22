@@ -4,6 +4,7 @@
 #include <map>
 #include <queue>
 #include <string>
+#include <vector>
 #include "model/usuario.h"
 
 class GestorDepartamentos {
@@ -18,6 +19,9 @@ public:
     // Métodos principales
     void registrarUsuario(Usuario usuario);
     Usuario atenderSiguiente(std::string nombreDepartamento);
+    bool atenderPorId(const std::string &nombreDepartamento, const std::string &id,
+                      Usuario &usuario);
+    std::vector<Usuario> listarUsuarios(const std::string &nombreDepartamento) const;
     bool hayUsuariosEnEspera(std::string nombreDepartamento);
 };
 

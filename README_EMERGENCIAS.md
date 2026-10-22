@@ -13,29 +13,29 @@ seguir compilando con la nueva firma de `Usuario`.
 ## Arquitectura
 
 ```
-Consola C++ (src/ui/main_emergencias.cpp)
-  |  texto / archivo de audio / micrófono
-  v
-ClienteClasificador (cpp-httplib + nlohmann/json)
-  |  HTTP
-  v
-Servicio Python FastAPI (servicios/clasificador)
-  |-- Laya local (modelo multilingual)  -> decisión local
-  |-- Jev vía OpenRouter                -> decisión remota
-  |-- Clasificador de reglas            -> respaldo determinista
-  |  HTTP
-  v
-whisper.cpp (whisper-server)  <- audio
+Panel web (Panel-de-Emergencias-Pixel)      Consola C++
+  |  texto / audio / micrófono                 |
+  v                                            v
+FastAPI (servicios/clasificador)          ClienteClasificador
+  |-- /panel/  -> sirve el panel            (consola independiente)
+  |-- /clasificar / /procesar-audio
+  |-- /api/... -> proxy HTTP
+  |-- Laya local / Jev / reglas
   |
   v
-GestorDepartamentos (colas de prioridad existentes)
+Motor C++ (core, src/ui/main_servidor.cpp)
+  |-- ServicioOperaciones
+  |-- GestorDepartamentos
+  |-- GestorRecursos / Unidad
+  |
+  v
+whisper.cpp (whisper-server) <- audio
 ```
 
-- La consola C++ mantiene una **cola FIFO de entrada** con textos y audios sin clasificar.
-- Al procesar una solicitud, el servicio responde con severidad, departamentos y confianza.
-- El C++ genera datos sintéticos del reportante: teléfono y coordenadas X/Y.
-- La emergencia se registra en la cola de prioridad de cada departamento seleccionado.
-- `atenderSiguiente` sigue usando el `GestorDepartamentos` original.
+- El panel usa el motor C++ por HTTP; no tiene cola ni datos simulados en el navegador.
+- La consola C++ es otro proceso y mantiene su propia instancia de colas.
+- El motor C++ registra al reportante con teléfono y coordenadas X/Y.
+- Las unidades se cargan desde `config/unidades.json`.
 
 ## Clasificación
 
@@ -114,7 +114,7 @@ selecciona explícitamente.
 ```powershell
 Copy-Item .env.example .env
 # Edita .env si vas a usar Jev: OPENROUTER_API_KEY=sk-or-...
-docker compose up -d --build whisper-modelos whisper clasificador
+docker compose up -d --build whisper-modelos core whisper clasificador
 ```
 
 La primera ejecución:
@@ -135,6 +135,16 @@ Comprobar el servicio:
 ```powershell
 curl.exe http://127.0.0.1:8100/salud
 ```
+
+Abrir el panel web:
+
+```text
+http://localhost:8100/
+```
+
+La raíz redirige a `/panel/`. El panel se sirve desde el mismo FastAPI; no necesita otro contenedor ni otro puerto. Si
+modificas `Panel-de-Emergencias-Pixel`, reconstruye con
+`docker compose build clasificador core && docker compose up -d clasificador core`.
 
 Ejecutar la consola dentro de Docker (perfil `app`):
 
@@ -224,6 +234,26 @@ Estado de Laya, whisper.cpp y configuración activa.
 
 Fuerza la carga del modelo de Laya en memoria.
 
+### API de operaciones del panel
+
+| M?todo | Ruta | Uso |
+|---|---|---|
+| `GET` | `/api/colas` | Emergencias para colas y mapa |
+| `POST` | `/api/emergencias` | Encolar una emergencia clasificada |
+| `GET` | `/api/emergencias` | Listar emergencias con filtros |
+| `GET` | `/api/emergencias/{id}` | Detalle |
+| `POST` | `/api/emergencias/{id}/atender` | Atender en un departamento |
+| `PATCH` | `/api/emergencias/{id}` | Alternativa de atención |
+| `GET` | `/api/unidades` | Flota simulada |
+| `POST` | `/api/unidades` | Registrar una unidad desde el panel |
+| `POST` | `/api/unidades/{id}/liberar` | Liberar unidad |
+| `POST` | `/api/operaciones/reiniciar` | Reiniciar colas y unidades |
+
+La API `/api/...` la atiende el contenedor `core`, que ejecuta `ServicioOperaciones` sobre
+`GestorDepartamentos` y `GestorRecursos` en C++. Las unidades se cargan desde
+`config/unidades.json`; si el archivo está vacío, el mapa no inventa unidades. La consola C++
+es otro proceso y mantiene su propia instancia de colas.
+
 ## Uso de la consola
 
 1. Encolar texto.
@@ -257,6 +287,12 @@ confianza, proveedor, modelo, teléfono del reportante y coordenadas X/Y.
 | `WITH_LAYA` | `1` | `0` para una imagen solo con Jev/reglas |
 | `TIMEOUT_LLM` | `45` | Timeout de clasificación en segundos |
 | `TIMEOUT_WHISPER` | `300` | Timeout de transcripción en segundos |
+| `CORE_URL` | `http://127.0.0.1:9000` | URL del motor C++ usada por FastAPI |
+| `CPP_API_PORT` | `9000` | Puerto interno del motor C++ |
+| `UNIDADES_FILE` | `/app/config/unidades.json` | Archivo de unidades del motor C++ |
+| `CLASIFICADOR_PUERTO` | `8100` | Puerto del clasificador/panel en el host |
+| `CLASIFICADOR_URL` | `http://127.0.0.1:8100` | URL que usa la consola C++ |
+| `PANEL_DIR` | `/app/panel` | Carpeta del panel dentro del contenedor |
 
 ## Pruebas
 
@@ -269,7 +305,7 @@ python -m venv .venv
 ```
 
 Las pruebas no descargan modelos ni llaman a OpenRouter: usan reglas, respuestas simuladas y
-un cliente Whisper falso.
+un cliente Whisper falso. El resultado esperado es `47 passed`.
 
 ## Estructura nueva
 
@@ -287,9 +323,17 @@ src/service/ProcesadorEmergencias.cpp
 src/ui/main_emergencias.cpp
 servicios/clasificador/app/clasificacion.py
 servicios/clasificador/app/guardarrailes.py
+servicios/clasificador/app/core.py
 servicios/clasificador/app/prompts.py
 servicios/clasificador/app/proveedores/...
 servicios/clasificador/...
+include/service/ServicioOperaciones.h
+src/service/ServicioOperaciones.cpp
+src/ui/main_servidor.cpp
+Dockerfile.core
+config/unidades.json
+config/unidades.example.json
+Panel-de-Emergencias-Pixel/
 CMakeLists.txt
 CMakePresets.json
 Dockerfile

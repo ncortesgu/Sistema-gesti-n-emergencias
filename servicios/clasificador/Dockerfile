@@ -3,7 +3,8 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    HF_HOME=/models/hf
+    HF_HOME=/models/hf \
+    PANEL_DIR=/app/panel
 
 WORKDIR /app
 
@@ -11,11 +12,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY servicios/clasificador/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 ARG WITH_LAYA=1
-COPY requirements-laya.txt .
+COPY servicios/clasificador/requirements-laya.txt .
 RUN if [ "$WITH_LAYA" = "1" ]; then \
         apt-get update \
         && apt-get install -y --no-install-recommends build-essential \
@@ -24,7 +25,8 @@ RUN if [ "$WITH_LAYA" = "1" ]; then \
         && pip install --no-cache-dir -r requirements-laya.txt; \
     fi
 
-COPY app ./app
+COPY servicios/clasificador/app ./app
+COPY Panel-de-Emergencias-Pixel ./panel
 
 EXPOSE 8000
 

@@ -18,9 +18,12 @@ técnica ampliada está en [`README_EMERGENCIAS.md`](README_EMERGENCIAS.md).
 | `include/service/ClienteClasificador.h`, `src/service/ClienteClasificador.cpp` | Cliente HTTP con `cpp-httplib` + `nlohmann/json` |
 | `include/service/GeneradorDatos.h`, `src/service/GeneradorDatos.cpp` | Teléfono y coordenadas X/Y aleatorias del reportante |
 | `include/service/ProcesadorEmergencias.h`, `src/service/ProcesadorEmergencias.cpp` | Cola FIFO de entrada, clasificación, enriquecimiento y registro en las colas por departamento |
+| `include/service/ServicioOperaciones.h`, `src/service/ServicioOperaciones.cpp` | Registro de emergencias, atención exacta por ID, unidades y estado de colas en C++ |
+| `include/service/GestorRecursos.h`, `include/model/unidad.h` | Recursos/unidades del compañero, integrados con la API C++ |
+| `src/ui/main_servidor.cpp` | Servidor HTTP del motor C++ (`/api/...`) |
 | `include/service/GrabadorAudio.h`, `src/service/GrabadorAudio.cpp` | Grabación del micrófono a WAV 16 kHz mono con miniaudio |
 | `src/ui/main_emergencias.cpp` | Consola nueva con menú de texto, audio, micrófono, colas y atención |
-| `CMakeLists.txt`, `CMakePresets.json` | Compilación del proyecto y del ejecutable nuevo |
+| `CMakeLists.txt`, `CMakePresets.json` | Compilación del proyecto y de los ejecutables nuevos |
 
 ### Servicio Python (`servicios/clasificador/`)
 
@@ -33,14 +36,19 @@ técnica ampliada está en [`README_EMERGENCIAS.md`](README_EMERGENCIAS.md).
 | `app/proveedores/reglas.py` | Clasificador determinista de respaldo |
 | `app/guardarrailes.py` | Corrección de errores evidentes después del modelo |
 | `app/whisper.py` | Cliente HTTP hacia whisper.cpp |
+| `app/core.py` | Cliente HTTP/proxy hacia el motor C++ |
 | `app/esquemas.py`, `app/config.py`, `app/decisiones.py` | Contratos, configuración y mapeo de respuestas |
-| `pruebas/` | 40 pruebas automáticas sin descargar modelos ni llamar a OpenRouter |
+| `pruebas/` | 47 pruebas automáticas sin descargar modelos ni llamar a OpenRouter |
 
 ### Docker y utilidades
 
 - `Dockerfile`: imagen de la consola C++.
-- `servicios/clasificador/Dockerfile`: imagen del clasificador con Laya + torch CPU.
-- `docker-compose.yml`: Whisper, clasificador y consola opcional.
+- `Dockerfile.core`: imagen del motor C++ que expone colas y recursos por HTTP.
+- `servicios/clasificador/Dockerfile`: imagen del clasificador con Laya + torch CPU y el panel.
+- `Panel-de-Emergencias-Pixel/`: panel web HTML/CSS/JS servido por FastAPI.
+- `config/unidades.json`: flota real que carga el motor C++ (vacía por defecto).
+- `config/unidades.example.json`: ejemplo de formato de unidades.
+- `docker-compose.yml`: Whisper, motor C++, clasificador/panel y consola opcional.
 - `.env.example`: configuración de ejemplo.
 - `scripts/`: descarga del modelo Whisper y calentamiento de Laya.
 - `README_EMERGENCIAS.md`: documentación técnica detallada.
@@ -113,7 +121,7 @@ Si no hay clave, deja `PROVEEDOR=laya` o `PROVEEDOR=reglas`.
 ### 2. Levantar Whisper y el clasificador
 
 ```powershell
-docker compose up -d --build whisper-modelos whisper clasificador
+docker compose up -d --build whisper-modelos core whisper clasificador
 docker compose ps
 ```
 
@@ -142,6 +150,13 @@ Respuesta esperada:
   "whisper_listo": true,
   "modelo_laya": "multilingual",
   "modelo_jev": "typesafe/jev-1.14",
+  "modelo": "multilingual",
+  "checks": {
+    "clasificador": true,
+    "audio": true,
+    "colas": true,
+    "unidades": true
+  },
   "detalle": null
 }
 ```
@@ -154,7 +169,33 @@ curl.exe -X POST http://127.0.0.1:8100/calentar
 
 La primera carga puede tardar varios minutos; después queda en caché.
 
-### 3. Compilar y abrir la consola
+### 3. Abrir el panel web
+
+El panel se sirve desde el mismo FastAPI, sin un servidor adicional:
+
+```text
+http://localhost:8100/
+```
+
+FastAPI/uvicorn actúa como servidor web Python y publica el contenido de
+`Panel-de-Emergencias-Pixel` en `/panel/`. Las llamadas del panel (`/salud`, `/clasificar` y
+`/api/...`) van al mismo origen, así que no hay problemas de CORS.
+
+Si editas el HTML, CSS o JavaScript del panel, reconstruye el contenedor del clasificador. Si
+editas el motor C++, reconstruye `core`:
+
+```powershell
+docker compose build clasificador
+docker compose build core
+docker compose up -d clasificador core
+```
+
+El panel no tiene modo simulación ni datos ficticios. Las colas y unidades vienen del motor
+C++ (`core`). Para que aparezcan unidades en el mapa, registra la flota real en
+`config/unidades.json`; el archivo se carga al iniciar el contenedor `core`. Puedes usar
+`config/unidades.example.json` como referencia de formato, pero no se carga por defecto.
+
+### 4. Compilar y abrir la consola
 
 ```powershell
 cmake --preset mingw
@@ -173,7 +214,7 @@ cmake --build build -j
 La consola lee `.env` desde la carpeta actual o sus carpetas superiores. Si no lo encuentra,
 usa `http://127.0.0.1:8100` por defecto.
 
-### 4. Alternativa: consola dentro de Docker
+### 5. Alternativa: consola dentro de Docker
 
 ```powershell
 docker compose --profile app run --rm app
@@ -254,6 +295,9 @@ El frontend debe hablar con el **clasificador FastAPI** en `http://localhost:810
 directamente con Laya, Jev ni whisper.cpp. La API key de OpenRouter queda solo en el
 contenedor del clasificador.
 
+El panel incluido ya implementa esta conexión: se sirve en `http://localhost:8100/` y
+usa el mismo origen para `/salud`, `/clasificar` y `/api/...`. La raíz redirige a `/panel/`.
+
 La API ya tiene CORS habilitado para desarrollo (`allow_origins=["*"]`). En producción se debe
 restringir a los dominios reales.
 
@@ -320,6 +364,35 @@ export interface Clasificacion {
   latencia_ms: number;
 }
 ```
+
+#### `POST /api/emergencias`
+
+El panel env?a la clasificaci?n y los datos del operador:
+
+```json
+{
+  "reporte_id": "REP-ABC123",
+  "texto": "Se está incendiando un apartamento y hay una persona atrapada",
+  "clasificacion": {
+    "departamento": "bomberos",
+    "departamentos": ["bomberos", "ambulancia"],
+    "severidad": 1,
+    "confianza": 0.91,
+    "informe": "Incendio con riesgo vital."
+  },
+  "severidad": 1,
+  "departamentos": ["bomberos", "ambulancia"],
+  "confianza": 0.91,
+  "informe": "Incendio con riesgo vital.",
+  "origen": "texto",
+  "x": 640,
+  "y": 310
+}
+```
+
+Responde con la emergencia creada, incluyendo `id`, `estado`, `atenciones` y `unidad`.
+Después se consulta `GET /api/colas` y se atiende con
+`POST /api/emergencias/{id}/atender`.
 
 #### `POST /procesar-audio`
 
@@ -399,38 +472,24 @@ function TarjetaEmergencia({ resultado }: { resultado: Clasificacion }) {
 - `503`: Laya/Whisper/OpenRouter no disponible. Muestra el `detail`.
 - La clasificación puede tardar varios segundos en CPU. Usa un spinner o estado de carga.
 
-### Limitación actual importante: la cola no está expuesta al frontend
+### Motor C++ real
 
-La cola de prioridad vive en el proceso C++ (`GestorDepartamentos`) y la consola la mantiene
-en memoria. El clasificador Python **solo clasifica**; no conoce ni modifica las colas del
-C++.
+El panel incluido en `Panel-de-Emergencias-Pixel` consume `/api/...`. FastAPI reenvía esas
+llamadas al contenedor `core`, que ejecuta `ServicioOperaciones` sobre `GestorDepartamentos` y
+`GestorRecursos` en C++. No hay cola simulada en Python ni datos de prueba en el panel.
 
-Por eso, hoy un frontend puede:
+- **Panel web:** colas y unidades del contenedor `core` (`http://core:9000`).
+- **Consola C++:** si la ejecutas aparte, crea su propia instancia de las colas en otro
+  proceso. Para una única fuente de verdad, usa el panel con `core` o adapta la consola para
+  consumir la API del `core`.
+- **Unidades:** se cargan desde `config/unidades.json`. Si el archivo está vacío, el mapa no
+  muestra unidades; no se inventan posiciones.
+- **Persistencia:** las colas viven en memoria del proceso `core`. Reiniciar el contenedor o
+  llamar a `/api/operaciones/reiniciar` las borra. El historial de clasificaciones del
+  navegador es local.
 
-1. Enviar texto o audio al clasificador.
-2. Mostrar severidad, departamentos, confianza y revisión.
-3. Usar la consola C++ para encolar y atender emergencias.
-
-Pero **no puede leer ni atender las colas del C++ por HTTP todavía**, porque esa parte no está
-expuesta.
-
-Para una integración completa del frontend con la cola hay dos caminos:
-
-- **Recomendado para la práctica:** agregar un pequeño servidor HTTP al C++ (por ejemplo
-  `ServidorEmergencias`) que envuelva `ProcesadorEmergencias` y exponga:
-  - `POST /api/emergencias` (texto o audio)
-  - `GET /api/colas`
-  - `POST /api/colas/{departamento}/atender`
-  - `GET /api/emergencias/{id}`
-
-  Luego el frontend llama a ese servidor en lugar de llamar directamente al clasificador.
-
-- **Alternativa:** mover la lógica de `GestorDepartamentos` al servicio Python. No es lo
-  ideal para esta práctica porque la cola de prioridad en C++ es el núcleo del trabajo de
-  estructuras de datos.
-
-Mientras eso no se implemente, el frontend debe presentarse como una vista de clasificación y
-la consola como el simulador de colas y atención.
+El motor C++ es el dueño real de las colas y de la asignación de unidades. El panel nunca
+usa `localStorage` para inventar emergencias, colas ni ambulancias.
 
 ## Configuración
 
@@ -447,9 +506,13 @@ la consola como el simulador de colas y atención.
 | `JEV_MODEL` | `typesafe/jev-1.14` | Modelo de decisiones de OpenRouter |
 | `WHISPER_MODEL` | `small` | `tiny`, `base`, `small`, `medium`... |
 | `WHISPER_LANGUAGE` | `es` | Idioma de whisper.cpp |
+| `CORE_URL` | `http://127.0.0.1:9000` | URL del motor C++ usada por FastAPI |
+| `CPP_API_PORT` | `9000` | Puerto interno del servidor C++ |
+| `UNIDADES_FILE` | `/app/config/unidades.json` | Archivo de flota que carga el motor C++ |
 | `WITH_LAYA` | `1` | `0` para una imagen sin Laya (solo Jev/reglas) |
 | `CLASIFICADOR_PUERTO` | `8100` | Puerto del clasificador en el host |
 | `CLASIFICADOR_URL` | `http://127.0.0.1:8100` | URL que usa la consola C++ |
+| `PANEL_DIR` | `/app/panel` | Carpeta del panel dentro del contenedor |
 | `DIRECTORIO_AUDIOS` | `audios` | Carpeta para grabaciones |
 
 ## Pruebas automáticas
@@ -462,7 +525,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m ruff check app pruebas
 ```
 
-Resultado esperado: `40 passed` y `All checks passed!`.
+Resultado esperado: `47 passed` y `All checks passed!`.
 
 Las pruebas no descargan Laya ni llaman a OpenRouter. Usan reglas, proveedores simulados y un
 Whisper falso.
@@ -480,7 +543,9 @@ Whisper falso.
 - **Whisper no transcribe:** verifica que el contenedor `whisper` esté `healthy` y que el
   archivo sea de audio válido. La imagen incluye ffmpeg para convertir formatos.
 - **No hay micrófono en Docker:** graba en Windows y sube el archivo, o ejecuta la consola
-  fuera de Docker.
+  fuera de Docker. El panel usa el micrófono del navegador, no el del contenedor.
+- **El micrófono del panel no funciona:** abre el panel por `http://localhost:8100/` o por
+  HTTPS. Los navegadores bloquean `getUserMedia` en orígenes HTTP que no sean localhost.
 - **Acentos raros en la terminal:** ejecuta `chcp 65001` o usa Windows Terminal; la consola
   configura UTF-8 al iniciar.
 - **Teléfono y coordenadas X/Y:** son datos sintéticos generados en C++, no geolocalización

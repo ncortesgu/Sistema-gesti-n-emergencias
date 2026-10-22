@@ -15,6 +15,16 @@ enum class EstadoAtencion {
     Atendiendo
 };
 
+struct UnidadVista {
+    std::string departamento;
+    std::string id;
+    int x;
+    int y;
+    double efectividad;
+    double velocidad;
+    bool asignada;
+};
+
 class GestorRecursos {
     private:
         // Mapa que asocia un departamento las unidades asociadas a este.
@@ -38,15 +48,19 @@ class GestorRecursos {
 
 
         void registrarUnidad(std::string departamento, std::string id, double efectividad, double velocidad);
+        void registrarUnidad(std::string departamento, std::string id, double efectividad,
+                             double velocidad, const coordenadas &ubicacion);
         void eliminarUnidad(const std::string& departamento, const std::string& id);
 
 
         // Métodos para asignar y liberar unidades
         bool asignarUnidad( Usuario& usuario);
-        void liberarUnidad(std::string& idUnidad);
+        bool asignarUnidad(Usuario& usuario, std::string& idUnidad);
+        bool liberarUnidad(std::string& idUnidad);
 
-        // Métodos para consultar el estado de las unidades
+        // MǸtodos para consultar el estado de las unidades
         int unidadesDisponibles(const std::string& departamento) const;
+        std::vector<UnidadVista> listarUnidades() const;
         void infoUnidad(const std::string& departamento, const std::string& idUnidad) const;
         
         //Unidad obtenerUnidad(std::string nombreDepartamento, Unidad unidad);

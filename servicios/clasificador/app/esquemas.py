@@ -23,6 +23,8 @@ class SolicitudClasificacion(BaseModel):
 
     texto: str = Field(min_length=3, max_length=8000)
     proveedor: Proveedor | None = None
+    x: int | None = Field(default=None, ge=0, le=1000)
+    y: int | None = Field(default=None, ge=0, le=1000)
 
 
 class RespuestaClasificacion(BaseModel):
@@ -54,4 +56,47 @@ class RespuestaSalud(BaseModel):
     whisper_listo: bool
     modelo_laya: str
     modelo_jev: str
+    modelo: str | None = None
+    checks: dict[str, bool] | None = None
     detalle: str | None = None
+
+
+class Ubicacion(BaseModel):
+    x: int = Field(ge=0, le=1000)
+    y: int = Field(ge=0, le=1000)
+
+
+class ClasificacionEntrante(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    departamento: str | None = None
+    departamentos: list[str] | None = None
+    severidad: int | None = Field(default=None, ge=1, le=5)
+    confianza: float | None = Field(default=None, ge=0.0, le=1.0)
+    justificacion: str | None = None
+    informe: str | None = None
+
+
+class NuevaEmergencia(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    reporte_id: str | None = None
+    texto: str = Field(min_length=1, max_length=8000)
+    transcripcion: str | None = None
+    clasificacion: ClasificacionEntrante | None = None
+    severidad: int | None = Field(default=None, ge=1, le=5)
+    departamentos: list[str] | None = None
+    confianza: float | None = Field(default=None, ge=0.0, le=1.0)
+    informe: str | None = None
+    origen: str | None = None
+    fecha: str | None = None
+    x: int | None = Field(default=None, ge=0, le=1000)
+    y: int | None = Field(default=None, ge=0, le=1000)
+    ubicacion: Ubicacion | None = None
+
+
+class AtenderSolicitud(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    departamento: str
+    atendida: bool = True

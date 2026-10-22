@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 from pytest import fixture
 
 from app.esquemas import RespuestaClasificacion
-from app.main import app, obtener_servicio, obtener_whisper
+from app.main import app, obtener_core, obtener_servicio, obtener_whisper
 
 
 class ServicioFalso:
@@ -36,8 +36,14 @@ class WhisperFalso:
         return True
 
 
+class CoreFalso:
+    async def salud(self) -> bool:
+        return True
+
+
 app.dependency_overrides[obtener_servicio] = lambda: ServicioFalso()
 app.dependency_overrides[obtener_whisper] = lambda: WhisperFalso()
+app.dependency_overrides[obtener_core] = lambda: CoreFalso()
 
 
 @fixture

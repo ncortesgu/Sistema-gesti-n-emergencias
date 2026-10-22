@@ -86,8 +86,25 @@ int GestorRecursos::unidadesDisponibles(
 }
 
 
+void GestorRecursos::registrarUnidad(
+    std::string departamento,
+    std::string id,
+    double efectividad,
+    double velocidad,
+    const coordenadas &ubicacion
+) {
+    registrarUnidad(departamento, id, efectividad, velocidad);
+    auto &unidades = recursos[departamento];
+    unidades.back().setUbicacion(ubicacion);
+}
+
 // Asignar la mejor unidad disponible al usuario
 bool GestorRecursos::asignarUnidad(Usuario& usuario) {
+    std::string idUnidad;
+    return asignarUnidad(usuario, idUnidad);
+}
+
+bool GestorRecursos::asignarUnidad(Usuario& usuario, std::string& idUnidad) {
     const std::string departamento = usuario.getDepartamento();
 
     auto itDepartamento = recursos.find(departamento);
@@ -131,6 +148,7 @@ bool GestorRecursos::asignarUnidad(Usuario& usuario) {
     }
 
     mejorUnidad->setAsignada(true);
+    idUnidad = mejorUnidad->getId();
 
     AtencionActiva atencion{
         usuario.getId(),
@@ -146,16 +164,36 @@ bool GestorRecursos::asignarUnidad(Usuario& usuario) {
 }
 
 
+std::vector<UnidadVista> GestorRecursos::listarUnidades() const {
+    std::vector<UnidadVista> lista;
+    for (const auto &par : recursos) {
+        for (const Unidad &unidad : par.second) {
+            const coordenadas ubicacion = unidad.getUbicacion();
+            lista.push_back(UnidadVista{
+                par.first,
+                unidad.getId(),
+                ubicacion.getX(),
+                ubicacion.getY(),
+                unidad.getEfectividad(),
+                unidad.getVelocidad(),
+                unidad.isAsignada(),
+            });
+        }
+    }
+    return lista;
+}
+
 // Liberar una unidad por su identificador
-void GestorRecursos::liberarUnidad(std::string& idUnidad) {
+bool GestorRecursos::liberarUnidad(std::string& idUnidad) {
     for (auto& par : recursos) {
         for (auto& unidad : par.second) {
             if (unidad.getId() == idUnidad) {
                 unidad.setAsignada(false);
-                return;
+                return true;
             }
         }
     }
+    return false;
 }
 
 

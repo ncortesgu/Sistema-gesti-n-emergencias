@@ -49,6 +49,8 @@ class Configuracion:
     jev_modelo: str = "typesafe/jev-1.14"
     timeout_llm: int = 45
 
+    core_url: str = "http://127.0.0.1:9000"
+
     whisper_url: str = "http://127.0.0.1:8080"
     whisper_idioma: str = "es"
     timeout_whisper: int = 300
@@ -72,6 +74,7 @@ class Configuracion:
             jev_modelo=os.getenv("JEV_MODEL", "typesafe/jev-1.14").strip()
             or "typesafe/jev-1.14",
             timeout_llm=_entero("TIMEOUT_LLM", 45),
+            core_url=os.getenv("CORE_URL", "http://127.0.0.1:9000").strip().rstrip("/"),
             whisper_url=os.getenv("WHISPER_URL", "http://127.0.0.1:8080").strip().rstrip("/"),
             whisper_idioma=os.getenv("WHISPER_LANGUAGE", "es").strip() or "es",
             timeout_whisper=_entero("TIMEOUT_WHISPER", 300),

@@ -24,12 +24,12 @@ services:
       - --port
       - "8080"
       - -m
-      - /models/ggml-${WHISPER_MODEL:-small}.bin
+      - /models/ggml-${WHISPER_MODEL:-base}.bin
       - -l
       - ${WHISPER_LANGUAGE:-es}
       - --convert
       - -t
-      - "4"
+      - "8"
     volumes:
       - whisper_modelos:/models
     depends_on:
@@ -44,9 +44,28 @@ services:
       retries: 5
       start_period: 30s
 
+  core:
+    build:
+      context: .
+      dockerfile: Dockerfile.core
+    environment:
+      CPP_API_PORT: "9000"
+      UNIDADES_FILE: /app/config/unidades.json
+    volumes:
+      - ./config:/app/config
+    expose:
+      - "9000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/api/salud"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
   clasificador:
     build:
-      context: ./servicios/clasificador
+      context: .
+      dockerfile: servicios/clasificador/Dockerfile
       args:
         WITH_LAYA: ${WITH_LAYA:-1}
     environment:
@@ -55,20 +74,25 @@ services:
       CONFIANZA_MINIMA: ${CONFIANZA_MINIMA:-0.55}
       UMBRAL_APOYO: ${UMBRAL_APOYO:-0.55}
       LAYA_MODEL: ${LAYA_MODEL:-multilingual}
-      LAYA_PRELOAD: ${LAYA_PRELOAD:-false}
+      LAYA_PRELOAD: ${LAYA_PRELOAD:-true}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       JEV_MODEL: ${JEV_MODEL:-typesafe/jev-1.14}
       WHISPER_URL: http://whisper:8080
       WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-es}
+      CORE_URL: http://core:9000
       TIMEOUT_LLM: ${TIMEOUT_LLM:-45}
       TIMEOUT_WHISPER: ${TIMEOUT_WHISPER:-300}
       HF_HOME: /models/hf
+      PANEL_DIR: /app/panel
     volumes:
       - hf_cache:/models/hf
+      - ./Panel-de-Emergencias-Pixel:/app/panel
     ports:
       - "${CLASIFICADOR_PUERTO:-8100}:8000"
     depends_on:
       whisper:
+        condition: service_healthy
+      core:
         condition: service_healthy
 
   app:
