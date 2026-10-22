@@ -1,5 +1,41 @@
 'use strict';
 
+/**
+ * Panel web del Sistema de Gestión de Emergencias (SGE).
+ *
+ * ESTRUCTURAS DE DATOS USADAS EN ESTE ARCHIVO
+ * =============================================
+ *
+ * 1. ARREGLO DINÁMICO (Array de JavaScript) — HISTORIAL DE CLASIFICACIONES
+ *    `state.history` es un `Array` que crece con cada reporte clasificado y se recorta a
+ *    `MAX_HISTORY` (50) entradas. Se persiste como JSON en `localStorage` bajo la clave
+ *    `sge.historial.v1`.
+ *    - Por qué: el historial es una colección heterogénea (texto, audio, severidad,
+ *      departamentos, confianza) cuyo tamaño depende del uso; un arreglo dinámico permite
+ *      agregar, editar y filtrar sin declarar un tamaño fijo, y `slice()` resuelve el
+ *      recorte del máximo sin crear otra estructura.
+ *    - Cómo: `addHistoryEntry` inserta al frente (`[draft, ...resto]`), `syncHistoryEntry`
+ *      actualiza el elemento existente por índice, `deleteHistoryItem` lo filtra y
+ *      `loadHistory`/`persistHistory` lo serializan a `localStorage`.
+ *
+ * 2. COLAS CON PRIORIDAD (listas de la API) — COLAS OPERATIVAS POR DEPARTAMENTO
+ *    Las colas de cada departamento NO viven en el navegador: el navegador las consume ya
+ *    ordenadas por el motor C++ (`/api/colas`), donde cada departamento usa una
+ *    `std::priority_queue<Usuario>` (heap binario) con la severidad como prioridad.
+ *    - Por qué: el orden de atención lo decide la gravedad, no el orden de llegada, y el
+ *      backend lo garantiza con un heap en vez de reordenar la lista en el cliente.
+ *    - Cómo: `normalizeQueuePayload` conserva el orden que entrega el servidor y
+ *      `filterQueueItems` solo filtra por severidad/departamento/texto sin alterar la
+ *      prioridad.
+ *
+ * 3. COLA FIFO — COLA DE PROCESAMIENTO DE ENTRADA
+ *    La cola de entrada del motor C++ (`std::queue<SolicitudEntrante>` en
+ *    `ProcesadorEmergencias`) procesa los reportes en el orden en que se recibieron. El
+ *    panel no la reimplementa: envía el reporte y consulta el estado ya clasificado.
+ *
+ * Ver `docs/ESTRUCTURAS_DATOS.md` para el porqué y el cómo de cada estructura.
+ */
+
 const CONFIG_KEY = 'sge.config.v2';
 const HISTORY_KEY = 'sge.historial.v1';
 const DRAFT_KEY = 'sge.borrador.v1';
@@ -366,6 +402,13 @@ function persistConfig() {
   }
 }
 
+/**
+ * Carga el HISTORIAL DE CLASIFICACIONES (arreglo dinámico en `localStorage`).
+ *
+ * @returns {Array<Object>} Arreglo con las últimas `MAX_HISTORY` clasificaciones; cada
+ *   elemento es un objeto con `localId`, `texto`, `severidad`, `departamentos`, etc.
+ *   Si el almacenamiento está bloqueado o corrupto devuelve un arreglo vacío.
+ */
 function loadHistory() {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
@@ -381,6 +424,12 @@ function loadHistory() {
   }
 }
 
+/**
+ * Guarda el HISTORIAL DE CLASIFICACIONES (arreglo dinámico) en `localStorage`.
+ *
+ * El arreglo se recorta con `slice(0, MAX_HISTORY)` antes de serializar para que el
+ * almacenamiento local no crezca de forma indefinida.
+ */
 function persistHistory() {
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0, MAX_HISTORY)));
@@ -1756,11 +1805,25 @@ function resetIntake() {
   };
 }
 
+/**
+ * Inserta una clasificación en el HISTORIAL (arreglo dinámico).
+ *
+ * La entrada nueva se coloca al frente y el arreglo se recorta a `MAX_HISTORY` entradas.
+ * Si el reporte ya estaba en el historial (mismo `localId`), se replaces en vez de
+ * duplicarlo.
+ *
+ * @param {Object} draft Clasificación normalizada que se guardará.
+ */
 function addHistoryEntry(draft) {
   state.history = [draft, ...state.history.filter((item) => item.localId !== draft.localId)].slice(0, MAX_HISTORY);
   persistHistory();
 }
 
+/**
+ * Actualiza una entrada existente del HISTORIAL (arreglo dinámico) sin duplicarla.
+ *
+ * @param {Object} draft Clasificación ya modificada (por ejemplo, con el ID del backend).
+ */
 function syncHistoryEntry(draft) {
   const index = state.history.findIndex((item) => item.localId === draft.localId);
   if (index === -1) return;
@@ -2275,6 +2338,17 @@ function mergeQueueItems(map, item) {
   }
 }
 
+/**
+ * Normaliza la respuesta de `/api/colas` a una lista de emergencias.
+ *
+ * El ORDEN de prioridad no se calcula en el navegador: el motor C++ ya entrega cada
+ * departamento ordenado por su cola con prioridad (`std::priority_queue<Usuario>`). Aquí
+ * solo se transforma el JSON en objetos planos y se combinan las filas repetidas de un
+ * mismo reporte (por ejemplo, la misma emergencia en dos departamentos).
+ *
+ * @param {Object} payload Respuesta de la API de colas.
+ * @returns {Array<Object>} Reportes normalizados.
+ */
 function normalizeQueuePayload(payload) {
   const map = new Map();
   const departmentKeys = Object.keys(DEPARTMENTS);
@@ -2503,6 +2577,15 @@ function queueCounts() {
   return counts;
 }
 
+/**
+ * Filtra las colas para la vista.
+ *
+ * El filtro NUNCA reordena: la prioridad (severidad) ya viene resuelta por la cola con
+ * prioridad del backend; aquí solo se descartan reportes por severidad, departamento o
+ * texto, y se mantiene el orden recibido.
+ *
+ * @returns {Array<Object>} Reportes visibles en la tabla de colas.
+ */
 function filterQueueItems() {
   const departmentFilter = state.filters.queueDept;
   const severityFilter = state.filters.queueSeverity;

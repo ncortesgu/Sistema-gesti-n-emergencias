@@ -8,6 +8,68 @@ El código de la práctica se adaptó a la última versión de `Usuario` y a la 
 `coordenadas` (X/Y). `GestorDepartamentos` conserva su lógica de colas de prioridad. La guía
 técnica ampliada está en [`README_EMERGENCIAS.md`](README_EMERGENCIAS.md).
 
+---
+
+## Estructuras de datos (requisito de la práctica)
+
+El proyecto integra **tres estructuras lineales**, elegidas cada una según el problema que
+resuelven. El detalle completo del **qué**, el **por qué** y el **cómo** está en
+[`docs/ESTRUCTURAS_DATOS.md`](docs/ESTRUCTURAS_DATOS.md).
+
+| # | Estructura | Implementación | Dónde está | Para qué sirve |
+|---|---|---|---|---|
+| 1 | **Cola (FIFO)** | `std::queue` | `include/service/ProcesadorEmergencias.h` | Cola de procesamiento de la **entrada de datos**: los reportes se clasifican en el orden en que llegaron. |
+| 2 | **Cola con prioridad** | `std::priority_queue` | `include/service/GestorDepartamentos.h` | Colas operativas **por departamento**: sale primero la emergencia más grave (severidad 1), no la más antigua. |
+| 3 | **Arreglo dinámico** | `Array` (JavaScript) | `Panel-de-Emergencias-Pixel/app.js` | **Historial de clasificaciones** del panel: crece con cada reporte y se recorta a 50 entradas en `localStorage`. |
+
+Complemento del mismo tipo en C++: `std::vector<Emergencia>` en `procesarTodas()`
+(arreglo dinámico con el lote de emergencias clasificadas).
+
+```
+Texto / Audio  →  (1) COLA FIFO (std::queue)        ProcesadorEmergencias.colaEntrada
+                       │ clasificar
+                       ▼
+                (2) COLA CON PRIORIDAD (heap)       GestorDepartamentos.departamentos
+                       │ atender
+                       ▼
+                (3) ARREGLO DINÁMICO (Array JS)      state.history (historial)
+```
+
+### Documentación del proyecto
+
+| Documento | Contenido |
+|---|---|
+| [`docs/MANUAL_USUARIO.md`](docs/MANUAL_USUARIO.md) | **Manual de usuario**: instalación, guía del panel web, guía de la consola C++, API y problemas frecuentes. |
+| [`docs/ESTRUCTURAS_DATOS.md`](docs/ESTRUCTURAS_DATOS.md) | **Qué y por qué se eligió cada estructura de datos**, cómo se usa, complejidad y alternativas descartadas. |
+| [`README_EMERGENCIAS.md`](README_EMERGENCIAS.md) | Guía técnica de la integración con el clasificador y el panel. |
+| Documentación en línea del código | Comentarios `/** ... */` (estilo Doxygen) en las cabeceras C++ y comentarios JSDoc en `app.js`, sobre todo en las estructuras de datos. |
+
+---
+
+## Uso de herramientas de inteligencia artificial
+
+Por exigencia de la práctica se declara el porcentaje del proyecto desarrollado con ayuda
+de herramientas de inteligencia artificial (asistentes de código y generadores de texto):
+
+**Estimación: ≈ 70 % del proyecto fue desarrollado con asistencia de IA.**
+
+| Componente | Estimación con IA | Aporte manual del equipo |
+|---|---|---|
+| Modelos y clases base C++ (`model/`) | ~60 % | Definición del modelo de dominio y revisión de la lógica de prioridad |
+| Servicios C++ (`service/`) | ~80 % | Integración con el clasificador y con las colas de prioridad |
+| Clasificador Python (`servicios/clasificador/`) | ~85 % | Definición de los prompts, reglas de negocio y ajustes de los guardarraíles |
+| Panel web (`Panel-de-Emergencias-Pixel/`) | ~75 % | Diseño de la interfaz, revisión de accesibilidad y de la consistencia visual |
+| Documentación (README, manual, guía de estructuras) | ~90 % | Verificación de que refleje el código real y redacción final |
+| Docker, scripts y configuración | ~70 % | Pruebas de integración local y ajustes de puertos y variables |
+
+La estimación se calculó por volumen de código y tiempo de trabajo: se contabilizó como
+«IA» el código y el texto generados o completados por el asistente, y como manual la
+escritura del modelo de dominio, la integración entre módulos, la depuración, las pruebas
+(`pytest`), la compilación con CMake y la decisión de qué estructura usar en cada punto.
+El equipo revisó y corrigió personalmente todo el material generado antes de incluirlo.
+
+---
+
 ## Qué se insertó
 
 ### C++
